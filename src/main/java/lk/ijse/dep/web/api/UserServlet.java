@@ -40,9 +40,14 @@ public class UserServlet extends HttpServlet {
             ResultSet rst = pstm.executeQuery();
             List<UserDTO> user = new ArrayList<>();
             while (rst.next()){
-                username
+                user.add(new UserDTO(
+                        rst.getString("username"),
+                        rst.getString("password")));
             }
-        } catch (SQLException throwables) {
+            response.setContentType("application/json");
+            response.getWriter().println(jsonb.toJson(user));
+        } catch (SQLException | JsonbException throwables) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             throwables.printStackTrace();
         }
 
