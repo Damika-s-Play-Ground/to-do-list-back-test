@@ -127,10 +127,56 @@ public class TodoItemServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        BasicDataSource cp = (BasicDataSource) getServletContext().getAttribute("cp");
+        Jsonb jsonb = JsonbBuilder.create();
+        TodoItemDTO item = jsonb.fromJson(req.getReader(), TodoItemDTO.class);//get the received json object as a TodoItemDTO
+
+        try (Connection connection = cp.getConnection()) {
+            PreparedStatement pstm = connection.prepareStatement("SELECT * FROM todo_item WHERE username=?");
+            pstm.setObject(1, req.getAttribute("user"));
+            if (pstm.executeQuery().next()) {
+                pstm = connection.prepareStatement("UPDATE todo_item SET text=?, `priority`=?, `status`=?, `username`=?");
+                pstm.setObject(1, item.getText());
+                pstm.setObject(2, item.getPriority().toString());
+                pstm.setObject(3, item.getStatus().toString());
+                pstm.setObject(4, item.getUsername());
+                if (pstm.executeUpdate() > 0) {
+                    resp.setStatus(HttpServletResponse.SC_CREATED);
+                    resp.setContentType("application/json");
+                    resp.getWriter().println(jsonb.toJson(item));
+                } else {
+                    resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                }
+            }
+        }catch(SQLException throwables){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            throwables.printStackTrace();
+        }
     }
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        BasicDataSource cp = (BasicDataSource) getServletContext().getAttribute("cp");
+        Jsonb jsonb = JsonbBuilder.create();
 
+        try (Connection connection = cp.getConnection()) {
+            PreparedStatement pstm = connection.prepareStatement("SELECT * FROM todo_item WHERE username=?");
+            pstm.setObject(1, req.getAttribute("user"));
+            if (pstm.executeQuery().next()) {
+                pstm = connection.prepareStatement("DELETE FROM todo_item WHERE username = ?");
+                pstm.setObject(1, req.getAttribute("user"));
+                boolean success = pstm.executeUpdate() > 0;
+                if (success) {
+                    resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                } else {
+                    resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                }
+            } else {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
+        } catch (SQLException throwables) {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            throwables.printStackTrace();
+        }
     }
 }
