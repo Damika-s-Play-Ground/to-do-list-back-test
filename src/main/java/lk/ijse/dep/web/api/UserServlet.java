@@ -3,6 +3,7 @@ package lk.ijse.dep.web.api; /**
  * @since : 11/01/2021
  **/
 
+import lk.ijse.dep.web.dto.TodoItemDTO;
 import lk.ijse.dep.web.dto.UserDTO;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -125,6 +126,33 @@ public class UserServlet extends HttpServlet {
         }catch (JsonbException exp){
             exp.printStackTrace();
             response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        BasicDataSource cp = (BasicDataSource) getServletContext().getAttribute("cp");
+        Jsonb jsonb = JsonbBuilder.create();
+        UserDTO user = jsonb.fromJson(req.getReader(), UserDTO.class);//get the received json object as a TodoItemDTO
+
+        try (Connection connection = cp.getConnection()) {
+            PreparedStatement pstm = connection.prepareStatement("SELECT * FROM user WHERE username=?");
+            pstm.setObject(1, req.getAttribute("user"));
+            if (pstm.executeQuery().next()) {
+                pstm = connection.prepareStatement("UPDATE user SET `username`=?,password = ?");
+                pstm.setObject(1, user.getUserName());
+                pstm.setObject(2, user.getPassword());
+                if (pstm.executeUpdate() > 0) {
+                    resp.setStatus(HttpServletResponse.SC_CREATED);
+                    resp.setContentType("application/json");
+                    resp.getWriter().println(jsonb.toJson(user));
+                } else {
+                    resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                }
+            }
+        }catch(SQLException throwables){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            throwables.printStackTrace();
         }
     }
 }
