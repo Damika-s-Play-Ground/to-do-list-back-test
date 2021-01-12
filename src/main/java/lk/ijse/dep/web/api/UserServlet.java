@@ -22,6 +22,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebServlet(name = "UserServlet", urlPatterns = {"/api/v1/users/*", "/api/v1/auth/"})//url pattern comes from authentication
 public class UserServlet extends HttpServlet {
@@ -29,10 +31,17 @@ public class UserServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         BasicDataSource cp = (BasicDataSource) getServletContext().getAttribute("cp");
         Jsonb jsonb = JsonbBuilder.create();
+        UserDTO userDTO = jsonb.fromJson(request.getReader(), UserDTO.class);//get the received json object as an UserDTO
         try(Connection connection = cp.getConnection()) {
-//            System.out.println(connection);
             PreparedStatement pstm = connection.prepareStatement("SELECT * FROM user WHERE username = ?");
-            pstm.setObject(1,request.getAttribute("user"));
+            if (userDTO.getUserName()!=null) {
+                pstm.setObject(1,request.getAttribute("user"));
+            }
+            ResultSet rst = pstm.executeQuery();
+            List<UserDTO> user = new ArrayList<>();
+            while (rst.next()){
+                username
+            }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
